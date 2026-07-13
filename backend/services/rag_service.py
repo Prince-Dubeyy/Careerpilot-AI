@@ -1,9 +1,5 @@
 import os
 import json
-from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from langchain_classic.chains import create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
@@ -14,8 +10,14 @@ from groq import Groq
 
 load_dotenv()
 
-# We will use all-MiniLM-L6-v2 as requested for embeddings
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+_embeddings_instance = None
+
+def get_embeddings():
+    global _embeddings_instance
+    if _embeddings_instance is None:
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        _embeddings_instance = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return _embeddings_instance
 
 # Global dict to hold user FAISS index
 vector_stores = {}
@@ -23,8 +25,10 @@ vector_stores = {}
 def process_document(file_path: str, doc_id: str):
     """Parses a document (PDF/DOCX), chunks it, embeds it, and stores in FAISS."""
     if file_path.endswith('.pdf'):
+        from langchain_community.document_loaders import PyPDFLoader
         loader = PyPDFLoader(file_path)
     elif file_path.endswith('.docx'):
+        from langchain_community.document_loaders import Docx2txtLoader
         loader = Docx2txtLoader(file_path)
     else:
         raise ValueError("Unsupported file format")
@@ -38,6 +42,9 @@ def process_text_document(text: str, doc_id: str):
     return _chunk_and_store(documents, doc_id)
 
 def _chunk_and_store(documents, doc_id: str):
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from langchain_community.vectorstores import FAISS
+    
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
@@ -46,8 +53,8 @@ def _chunk_and_store(documents, doc_id: str):
     
     chunks = text_splitter.split_documents(documents)
     
-    # Create FAISS vector store from chunks
-    vector_store = FAISS.from_documents(chunks, embeddings)
+    # Create FAISS vector store from chunks using lazy-loaded embeddings
+    vector_store = FAISS.from_documents(chunks, get_embeddings())
     
     # Store it in our simple in-memory dict
     vector_stores[doc_id] = vector_store

@@ -1,5 +1,7 @@
 import uuid
 import os
+import psutil
+import logging
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,6 +11,10 @@ from services.rag_service import process_document, process_text_document, get_ra
 from typing import Optional
 
 load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AI Career & Interview Copilot API")
 
@@ -21,9 +27,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def get_memory_usage():
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss / (1024 * 1024)
+
+@app.on_event("startup")
+async def startup_event():
+    mem_mb = get_memory_usage()
+    logger.info(f"🚀 Application Startup Complete. Initial Memory Usage: {mem_mb:.2f} MB")
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to AI Career & Interview Copilot API"}
+
+@app.get("/api/health")
+def health_check():
+    mem_mb = get_memory_usage()
+    logger.info(f"Health Check Memory Usage: {mem_mb:.2f} MB")
+    return {"status": "ok", "memory_mb": round(mem_mb, 2)}
 
 @app.post("/api/upload")
 async def upload_document(file: UploadFile = File(...), doc_type: str = Form(...)):
