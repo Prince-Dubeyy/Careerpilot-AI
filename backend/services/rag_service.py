@@ -1,12 +1,6 @@
 import os
 import json
-from langchain_groq import ChatGroq
-from langchain_classic.chains import create_retrieval_chain
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.documents import Document
 from dotenv import load_dotenv
-from groq import Groq
 
 load_dotenv()
 
@@ -38,6 +32,7 @@ def process_document(file_path: str, doc_id: str):
 
 def process_text_document(text: str, doc_id: str):
     """Processes raw text (e.g., Job Description paste) and stores in FAISS."""
+    from langchain_core.documents import Document
     documents = [Document(page_content=text, metadata={"source": "pasted_text"})]
     return _chunk_and_store(documents, doc_id)
 
@@ -63,6 +58,11 @@ def _chunk_and_store(documents, doc_id: str):
 
 def get_rag_chain(doc_id: str):
     """Returns a RAG chain based on the document's vector store."""
+    from langchain_groq import ChatGroq
+    from langchain_classic.chains import create_retrieval_chain
+    from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+    from langchain_core.prompts import ChatPromptTemplate
+    
     if doc_id not in vector_stores:
         raise ValueError("Document not found or not processed yet.")
         
@@ -104,6 +104,8 @@ def _extract_full_text(doc_id: str) -> str:
 
 def analyze_ats_match(resume_id: str, jd_id: str) -> dict:
     """Compare resume and JD to calculate ATS score and explicitly list missing skills."""
+    from langchain_groq import ChatGroq
+    
     resume_text = _extract_full_text(resume_id)
     jd_text = _extract_full_text(jd_id)
     
@@ -167,6 +169,8 @@ def analyze_ats_match(resume_id: str, jd_id: str) -> dict:
 
 def generate_interview_questions(resume_id: str, jd_id: str) -> list:
     """Generates 5 interview questions based on the specific resume and JD."""
+    from langchain_groq import ChatGroq
+    
     resume_text = _extract_full_text(resume_id)
     jd_text = _extract_full_text(jd_id)
     
@@ -223,6 +227,8 @@ def generate_interview_questions(resume_id: str, jd_id: str) -> list:
 
 def evaluate_interview_answers(resume_id: str, jd_id: str, questions: list, answers: list) -> dict:
     """Evaluates the interview answers based on the resume and JD."""
+    from langchain_groq import ChatGroq
+    
     resume_text = _extract_full_text(resume_id)
     jd_text = _extract_full_text(jd_id)
     
@@ -286,6 +292,7 @@ def evaluate_interview_answers(resume_id: str, jd_id: str, questions: list, answ
 
 def transcribe_audio(file_path: str) -> str:
     """Transcribes an audio file using Groq's Whisper API."""
+    from groq import Groq
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     try:
         with open(file_path, "rb") as file:
@@ -301,6 +308,8 @@ def transcribe_audio(file_path: str) -> str:
 
 def evaluate_single_answer(resume_id: str, jd_id: str, question: str, answer: str) -> dict:
     """Evaluates a single interview answer strictly."""
+    from langchain_groq import ChatGroq
+    
     resume_text = _extract_full_text(resume_id)
     jd_text = _extract_full_text(jd_id)
     
@@ -376,6 +385,8 @@ def evaluate_single_answer(resume_id: str, jd_id: str, question: str, answer: st
 
 def generate_final_report(resume_id: str, jd_id: str, qa_history: list) -> dict:
     """Generates a final comprehensive report based on all evaluated questions."""
+    from langchain_groq import ChatGroq
+    
     resume_text = _extract_full_text(resume_id)
     
     llm = ChatGroq(
